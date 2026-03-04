@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>專打小人廟 (Da Siu Yan Temple)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            touch-action: manipulation;
+            background-color: #2a0606; 
+            height: 100vh;
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .bg-dots {
+            background-image: radial-gradient(#4a0a0a 1.5px, transparent 1.5px);
+            background-size: 18px 18px;
+        }
+
+        .side-banner {
+            background-color: #d11515;
+            background-image: radial-gradient(rgba(0, 0, 0, 0.1) 2px, transparent 2px);
+            background-size: 12px 12px;
+        }
+
+        .banner-char {
+            font-family: 'Noto Serif TC', serif;
+            font-size: clamp(1.1rem, 4vw, 2rem);
+            color: #111;
+            font-weight: 900;
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.2);
+        }
+
+        .banner-char::before {
+            content: '';
+            position: absolute;
+            width: clamp(28px, 6.5vw, 46px);
+            height: clamp(28px, 6.5vw, 46px);
+            background: rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0,0,0,0.15);
+            border-radius: 50%;
+            z-index: -1;
+        }
+
+        .banner-char-top {
+            font-family: 'Noto Serif TC', serif;
+            font-size: clamp(1.4rem, 5vw, 2.5rem);
+            color: #111;
+            font-weight: 900;
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.2);
+        }
+
+        .banner-char-top::before {
+            content: '';
+            position: absolute;
+            width: clamp(34px, 7vw, 54px);
+            height: clamp(34px, 7vw, 54px);
+            background: rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0,0,0,0.15);
+            border-radius: 50%;
+            z-index: -1;
+        }
+
+        /* 寺廟裝飾風格 */
+        .temple-border {
+            border: 4px solid #ffcc00;
+            box-shadow: 0 0 15px rgba(255, 204, 0, 0.6);
+            background-color: #a3a3a3;
+        }
+
+        /* 巨大拖鞋樣式 */
+        .tool {
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            pointer-events: none;
+            transform-origin: bottom right;
+            opacity: 0;
+            z-index: 100;
+        }
+        .hit-animation {
+            animation: hit 0.2s ease-out forwards;
+        }
+        @keyframes hit {
+            0% { transform: translate(-50%, -80%) scale(1.8) rotate(45deg); opacity: 1; }
+            40% { transform: translate(-50%, -50%) scale(1.3) rotate(-30deg); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.1) rotate(-30deg); opacity: 0; }
+        }
+
+        /* 咒語文字 */
+        .curse-text {
+            position: absolute;
+            pointer-events: none;
+            font-size: 2rem; 
+            font-weight: 900;
+            color: #fef08a; 
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
+            z-index: 50;
+            white-space: nowrap;
+            animation: curse-burst-anim 1.5s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+        }
+        @keyframes curse-burst-anim {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            20% { opacity: 1; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.2); }
+            100% { transform: translate(calc(-50% + var(--tx-end)), calc(-50% + var(--ty-end))) scale(1); opacity: 0; }
+        }
+
+        /* 置中緩慢掉落的祝福語 */
+        .blessing-text {
+            position: absolute;
+            pointer-events: none;
+            font-weight: 900;
+            color: #fbbf24;
+            text-shadow: 0 0 15px rgba(0,0,0,0.9), 0 0 5px #fbbf24;
+            z-index: 200;
+            text-align: center;
+            white-space: nowrap;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+        }
+        @keyframes blessing-fall {
+            0% { transform: translate(-50%, -20px) scale(0.6); opacity: 0; }
+            10% { opacity: 1; transform: translate(-50%, 15vh) scale(1.3); }
+            85% { opacity: 1; transform: translate(-50%, 75vh) scale(1.3); }
+            100% { transform: translate(-50%, 90vh) scale(0.8); opacity: 0; }
+        }
+
+        .villain-idle {
+            animation: idle-wobble 4s ease-in-out infinite;
+        }
+        @keyframes idle-wobble {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(2deg); }
+        }
+
+        .villain-shake {
+            animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-4px, 0, 0) scale(1.1); }
+            20%, 80% { transform: translate3d(8px, 0, 0) scale(1.1); }
+            30%, 50%, 70% { transform: translate3d(-10px, 0, 0) scale(1.1); }
+            40%, 60% { transform: translate3d(10px, 0, 0) scale(1.1); }
+        }
+
+        #villain-container {
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.3s ease-out;
+        }
+        .villain-flattened {
+            transform: scale(1.8, 0.05) translateY(200px);
+            filter: grayscale(1) brightness(0.5); 
+        }
+
+        .confetti {
+            position: absolute;
+            z-index: 150;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: confetti-fall 6s ease-out forwards;
+        }
+        @keyframes confetti-fall {
+            0% { transform: translateY(0) rotate(0deg) scale(0); opacity: 1; }
+            10% { transform: translateY(-80px) rotate(45deg) scale(1.3); }
+            100% { transform: translateY(100vh) rotate(1080deg) scale(1); opacity: 0; }
+        }
+
+        .combo-text {
+            position: absolute;
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #fbbf24;
+            text-shadow: 0 0 10px rgba(251, 191, 36, 0.8);
+            z-index: 60;
+            animation: combo-pop 0.8s ease-out forwards;
+        }
+        @keyframes combo-pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(1.1) translateY(-30px); opacity: 0; }
+        }
+        
+        /* Hint Pulse Animation */
+        @keyframes intense-pulse {
+            0%, 100% { box-shadow: 0 4px 0 #8b6100; transform: scale(1); }
+            50% { box-shadow: 0 0 20px 5px rgba(217, 160, 0, 0.6), 0 4px 0 #8b6100; transform: scale(1.05); }
+        }
+        .hint-pulse {
+            animation: intense-pulse 2s infinite;
+            z-index: 50; 
+        }
+    </style>
+</head>
+<body class="bg-dots flex flex-row w-full h-full overflow-hidden text-white">
+
+    <!-- 左側對聯 (下聯): 今朝顯婢膝奴顏 -->
+    <aside class="w-[12%] max-w-[50px] md:max-w-[70px] h-full side-banner flex flex-col justify-evenly items-center py-4 shadow-[2px_0_10px_rgba(0,0,0,0.5)] z-20 border-r border-[#6a0000] shrink-0">
+        <div class="banner-char">今</div>
+        <div class="banner-char">朝</div>
+        <div class="banner-char">顯</div>
+        <div class="banner-char">婢</div>
+        <div class="banner-char">膝</div>
+        <div class="banner-char">奴</div>
+        <div class="banner-char">顏</div>
+    </aside>
+
+    <!-- 中央互動區 -->
+    <main class="flex-1 flex flex-col h-full relative z-10 overflow-hidden">
+        
+        <!-- 頂部橫批: 原形畢露 (傳統為由右至左讀) -->
+        <header class="w-full h-12 md:h-16 side-banner flex justify-around items-center shadow-md border-b border-[#6a0000] px-4 md:px-12 shrink-0">
+            <div class="banner-char-top">露</div>
+            <div class="banner-char-top">畢</div>
+            <div class="banner-char-top">形</div>
+            <div class="banner-char-top">原</div>
+        </header>
+
+        <!-- 遊戲主體 -->
+        <div id="game-container" class="flex-1 w-full flex flex-col items-center justify-start pt-4 pb-2 relative overflow-hidden cursor-pointer">
+            
+            <div class="w-full max-w-md flex flex-col items-center h-full">
+                <!-- 標題區 -->
+                <div class="mb-4 text-center shrink-0">
+                    <h1 class="text-4xl md:text-5xl font-black text-[#ffcc00] tracking-tighter drop-shadow-md leading-tight">專打小人廟</h1>
+                    <h2 class="text-lg md:text-xl font-bold text-white italic mt-1">打小人，轉好運</h2>
+                    <p class="text-[#ff7777] text-sm md:text-base font-bold mt-1 tracking-wider"># 我 忍 咗 你 好 耐 啦 #</p>
+                </div>
+
+                <!-- 小人容器 -->
+                <div id="villain-container" class="relative flex flex-col items-center shrink-0 villain-idle my-4">
+                    <div id="villain-image-wrapper" class="relative flex items-center justify-center overflow-hidden w-48 h-48 md:w-56 md:h-56 rounded-xl temple-border">
+                        <img id="villain-image" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgMjAwIDIwMCI+CiAgPGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSI3NSIgZmlsbD0iI2Q5NzcwMCIgLz4KICA8Y2lyY2xlIGN4PSI2NSIgY3k9IjExNSIgcj0iMTgiIGZpbGw9IiNhODMyMDAiIG9wYWNpdHk9IjAuNiIvPgogIDxjaXJjbGUgY3g9IjEzNSIgY3k9IjExNSIgcj0iMTgiIGZpbGw9IiNhODMyMDAiIG9wYWNpdHk9IjAuNiIvPgogIDxjaXJjbGUgY3g9Ijc1IiBjeT0iODUiIHI9IjE2IiBmaWxsPSJ3aGl0ZSIgLz4KICA8Y2lyY2xlIGN4PSIxMjUiIGN5PSI4NSIgcj0iMTYiIGZpbGw9IndoaXRlIiAvPgogIDxjaXJjbGUgY3g9IjgwIiBjeT0iODUiIHI9IjciIGZpbGw9ImJsYWNrIiAvPgogIDxjaXJjbGUgY3g9IjEyMCIgY3k9Ijg1IiByPSI3IiBmaWxsPSJibGFjayIgLz4KICA8cGF0aCBkPSJNMjY1IDEyNSBDIDgwIDE0NSwgMTIwIDE0NSwgMTM1IDEyNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSI2IiBzdHJva2UtbGluZWNhcD0icm91bmQiIC8+Cjwvc3ZnPg==" class="object-cover w-full h-full">
+                        
+                        <div id="image-overlay-hint" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span class="px-3 py-1.5 text-xs font-bold text-white rounded-md bg-black/60 shadow-sm">請上傳照片</span>
+                        </div>
+                    </div>
+                    
+                    <div class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#d9a000] text-[#4a2511] px-4 py-1 rounded shadow-md z-30 pointer-events-none border border-[#8b6100] text-sm font-bold whitespace-nowrap">
+                        生得一副小人樣
+                    </div>
+                </div>
+                
+                <!-- 操作按鈕區 -->
+                <div class="w-full mt-6 text-center z-30 shrink-0">
+                    <div class="flex flex-row items-center justify-center gap-4">
+                        <label id="upload-label" for="upload-input" class="hint-pulse flex-1 max-w-[130px] bg-[#d9a000] hover:bg-[#ffbf00] text-white font-bold py-2.5 px-1 rounded-lg cursor-pointer transition-all shadow-[0_4px_0_#8b6100] text-sm select-none active:translate-y-1 active:shadow-none">
+                            上傳小人照片
+                        </label>
+                        <button id="reset-button" class="flex-1 max-w-[130px] bg-[#8b1c1c] hover:bg-[#a52020] text-[#ffcc00] border-2 border-[#ffcc00] font-bold py-2 px-1 rounded-lg cursor-pointer transition-all shadow-[0_4px_0_#4a0a0a] text-sm select-none active:translate-y-1 active:shadow-none">
+                            放下拖鞋
+                        </button>
+                    </div>
+                    <input type="file" id="upload-input" class="hidden" accept="image/*">
+                    
+                    <!-- 記錄框 -->
+                    <div class="mt-8 px-8 py-2 bg-[#2a0606] border border-[#ffcc00] rounded-xl shadow-inner inline-block min-w-[200px]">
+                        <div class="text-[#ffcc00] text-[10px] font-bold uppercase tracking-widest text-center mb-1">懲戒記錄</div>
+                        <div class="text-3xl font-black text-[#ffcc00] text-center">
+                            已打：<span id="counter">0</span> 次
+                        </div>
+                        <div id="combo-counter" class="h-4 mt-1 text-xs font-black text-center text-orange-400"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 右側對聯 (上聯): 昔日裝凜然大義 -->
+    <aside class="w-[12%] max-w-[50px] md:max-w-[70px] h-full side-banner flex flex-col justify-evenly items-center py-4 shadow-[-2px_0_10px_rgba(0,0,0,0.5)] z-20 border-l border-[#6a0000] shrink-0">
+        <div class="banner-char">昔</div>
+        <div class="banner-char">日</div>
+        <div class="banner-char">裝</div>
+        <div class="banner-char">凜</div>
+        <div class="banner-char">然</div>
+        <div class="banner-char">大</div>
+        <div class="banner-char">義</div>
+    </aside>
+
+    <!-- 提示框 (Toast) -->
+    <div id="toast" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/90 text-[#ffcc00] px-6 py-4 rounded-xl z-[999] opacity-0 pointer-events-none transition-opacity duration-300 shadow-2xl border border-[#d9a000] text-center font-bold">
+        <div class="mb-1 text-xl">⚠️ 且慢！</div>
+        <div class="text-sm text-white">請先上傳小人照片<br>再進行懲戒！</div>
+    </div>
+
+    <!-- 拖鞋模板 -->
+    <svg id="tool-svg" class="tool" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+        <path d="M160,80 C170,140 130,180 80,180 C40,180 20,140 30,80 C40,20 100,10 140,40 C155,50 160,65 160,80 Z" fill="#b45309" stroke="#451a03" stroke-width="4"/>
+        <path d="M150,75 C160,130 120,165 75,165 C45,165 30,130 38,75 C45,25 95,18 135,45 Z" fill="#d97706"/>
+        <path d="M60,60 L90,100 L120,60" fill="none" stroke="#451a03" stroke-width="12" stroke-linecap="round"/>
+        <path d="M60,60 L90,100 L120,60" fill="none" stroke="#f59e0b" stroke-width="6" stroke-linecap="round"/>
+    </svg>
+
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const villainContainer = document.getElementById('villain-container');
+        const villainImage = document.getElementById('villain-image');
+        const uploadInput = document.getElementById('upload-input');
+        const uploadLabel = document.getElementById('upload-label');
+        const imageOverlayHint = document.getElementById('image-overlay-hint');
+        const counter = document.getElementById('counter');
+        const toolTemplate = document.getElementById('tool-svg');
+        const resetButton = document.getElementById('reset-button');
+        const comboCounterDisplay = document.getElementById('combo-counter');
+        const defaultVillainSrc = villainImage.src;
+        const toast = document.getElementById('toast');
+
+        let hitCount = 0;
+        let isSoundReady = false;
+        let isFlattened = false;
+        let hasUploaded = false;
+        
+        let comboCount = 0;
+        let lastHitTime = 0;
+        let comboTimeout;
+        let lastEventTime = 0; 
+
+        const hitSynth = new Tone.MembraneSynth({ 
+            pitchDecay: 0.1, octaves: 4, oscillator: { type: 'sine' }, 
+            envelope: { attack: 0.001, decay: 0.2, sustain: 0.1, release: 0.5 },
+            volume: 15 
+        }).toDestination();
+        
+        const splatSynth = new Tone.NoiseSynth({ 
+            noise: { type: 'white' }, 
+            envelope: { attack: 0.005, decay: 0.8, sustain: 0 }, 
+            volume: 18 
+        }).toDestination();
+
+        const curses = [
+            "打你個小人頭，等你成世無出頭!", 
+            "打你個小人眼，等你損手又爛腳!", 
+            "打你個小人耳，等你成世被人欺!",
+            "打你個小人鼻，等你食飯都無味！",
+            "打你個小人嘴，等你成世無水聚！", 
+            "打你個小人膊，等你成世無執獲!", 
+            "打你個小人心，等你做人無良心!", 
+            "打你個小人手，等你成世無藥救！", 
+            "打你個小人腹，等你好事變爛熟！",
+            "打你個小人背，等你成世行衰運！",
+            "打你個小人腰，等你成世折腰！",
+            "打你個小人肚，等你成世去跑路！",
+            "打你個小人膝蓋，等你成世要乞食!",
+            "打你個小人腳，等你成世無人約！"
+        ];
+
+        const blessings = [
+            "打過小人： 財源滾滾，大吉大利!",
+            "打過小人： 貴人扶持，身體健康!",
+            "小人走，貴人到： 衰氣去，好運來!",
+            "打走小人，貴人自來： 東南西北，財源廣進!",
+            "打走衰氣，福氣到門： 順風順水，大吉大利!",
+            "打走是非，家宅平安： 小人遠離，貴人招引!"
+        ];
+
+        const prosperityIcons = ['🧧', '💰', '🪙', '💵', '💎', '👑', '✨', '💴', '💷', '💶', '💸', '🏮'];
+
+        const KO_HIT_THRESHOLD = 50;
+
+        const initAudio = async () => {
+            if (!isSoundReady) {
+                await Tone.start();
+                isSoundReady = true;
+            }
+        };
+
+        const showToast = () => {
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 2000);
+        };
+
+        const triggerProsperityRain = () => {
+            for (let i = 0; i < 60; i++) {
+                const item = document.createElement('div');
+                item.className = 'confetti';
+                item.innerText = prosperityIcons[Math.floor(Math.random() * prosperityIcons.length)];
+                item.style.left = Math.random() * 100 + 'vw';
+                item.style.top = Math.random() * -30 + 'vh';
+                const size = Math.random() * 20 + 25; 
+                item.style.fontSize = size + 'px';
+                document.body.appendChild(item);
+                item.addEventListener('animationend', () => item.remove());
+            }
+        };
+
+        const triggerBlessings = () => {
+            // 每隔一段時間從中央掉落一句祝福語
+            blessings.forEach((text, index) => {
+                setTimeout(() => {
+                    const blessing = document.createElement('div');
+                    blessing.className = 'blessing-text';
+                    blessing.innerText = text;
+                    blessing.style.fontSize = `clamp(1.5rem, 5vw, 2.5rem)`;
+                    // 緩慢掉落動畫設定為 5 秒
+                    blessing.style.animation = 'blessing-fall 5s ease-in-out forwards';
+                    document.body.appendChild(blessing);
+                    blessing.addEventListener('animationend', () => blessing.remove());
+                }, index * 1000); // 每一句間隔 1 秒
+            });
+        };
+
+        const flattenVillain = () => {
+            if (isFlattened) return;
+            isFlattened = true;
+            villainContainer.classList.remove('villain-idle');
+            villainContainer.classList.add('villain-flattened');
+            if (isSoundReady) {
+                try {
+                    splatSynth.triggerAttackRelease("8n", Tone.now());
+                } catch(e) {}
+            }
+            triggerProsperityRain();
+            triggerBlessings();
+            
+            // 延長打平的時間，讓使用者有足夠時間看完落下的祝福語
+            setTimeout(() => {
+                villainContainer.classList.remove('villain-flattened');
+                villainContainer.classList.add('villain-idle');
+                isFlattened = false;
+            }, 7500);
+        };
+
+        const handleCombo = (x, y) => {
+            const now = Date.now();
+            if (now - lastHitTime < 800) {
+                comboCount++;
+            } else {
+                comboCount = 1;
+            }
+            lastHitTime = now;
+            comboCounterDisplay.innerText = comboCount > 1 ? `${comboCount} 連連暴擊!` : '';
+            if (comboCount > 0 && comboCount % 10 === 0) {
+                showComboText(`神速!!`, x, y);
+            }
+            clearTimeout(comboTimeout);
+            comboTimeout = setTimeout(() => {
+                comboCount = 0;
+                comboCounterDisplay.innerText = '';
+            }, 1200);
+        };
+        
+        const showComboText = (text, x, y) => {
+            const textEl = document.createElement('div');
+            textEl.className = 'combo-text';
+            textEl.innerText = text;
+            textEl.style.left = `${x}px`;
+            textEl.style.top = `${y - 100}px`;
+            textEl.style.transform = 'translateX(-50%)';
+            document.body.appendChild(textEl);
+            textEl.addEventListener('animationend', () => textEl.remove());
+        };
+
+        const handleHit = async (e) => {
+            const target = e.target;
+            if (
+                target.id === 'upload-input' || 
+                target.tagName === 'LABEL' || 
+                target.closest('label') || 
+                target.id === 'reset-button'
+            ) {
+                return;
+            }
+
+            if (!hasUploaded) {
+                showToast();
+                return;
+            }
+
+            if (isFlattened) return;
+
+            const currentEventTime = Date.now();
+            if (currentEventTime - lastEventTime < 40) return; 
+            lastEventTime = currentEventTime;
+            
+            await initAudio();
+
+            // 確保音效可以被順利重疊播放：直接實例化新的 Audio 物件來播放，避免 cloneNode 在某些環境下丟失交互權限
+            const currentHitAudio = new Audio("114586__tuesdayal__sext08.wav");
+            currentHitAudio.play().catch(err => console.warn("音效播放遭攔截:", err));
+
+            if (isSoundReady) {
+                try {
+                    hitSynth.triggerAttackRelease("C2", "16n", Tone.now());
+                } catch (error) {
+                    console.warn("Tone.js 聲音排程略過", error);
+                }
+            }
+            
+            hitCount++;
+            counter.innerText = hitCount;
+
+            if (hitCount > 0 && hitCount % KO_HIT_THRESHOLD === 0) {
+                flattenVillain();
+            } else {
+                villainContainer.classList.remove('villain-shake');
+                void villainContainer.offsetWidth;
+                villainContainer.classList.add('villain-shake');
+            }
+
+            const x = e.clientX || (e.touches && e.touches[0].clientX);
+            const y = e.clientY || (e.touches && e.touches[0].clientY);
+
+            createTool(x, y);
+            createCurseText(x, y);
+            createParticles(x, y);
+            handleCombo(x, y);
+        };
+        
+        const createTool = (x, y) => {
+            const tool = toolTemplate.cloneNode(true);
+            tool.removeAttribute('id');
+            tool.style.left = `${x}px`;
+            tool.style.top = `${y}px`;
+            tool.classList.add('hit-animation');
+            document.body.appendChild(tool);
+            tool.addEventListener('animationend', () => tool.remove());
+        };
+
+        const createCurseText = (x, y) => {
+            if (isFlattened) return;
+            const curseText = document.createElement('div');
+            curseText.className = 'curse-text';
+            curseText.innerText = curses[Math.floor(Math.random() * curses.length)];
+            
+            const tx = (Math.random() - 0.5) * 200;
+            const ty = (Math.random() - 0.5) * 200;
+            const txEnd = tx * 1.5;
+            const tyEnd = ty * 1.5;
+            
+            curseText.style.setProperty('--tx', `${tx}px`);
+            curseText.style.setProperty('--ty', `${ty}px`);
+            curseText.style.setProperty('--tx-end', `${txEnd}px`);
+            curseText.style.setProperty('--ty-end', `${tyEnd}px`);
+            
+            curseText.style.left = `${x}px`;
+            curseText.style.top = `${y}px`;
+            
+            document.body.appendChild(curseText);
+            curseText.addEventListener('animationend', () => curseText.remove());
+        };
+
+        const createParticles = (x, y) => {
+            const particleCount = 8;
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'absolute pointer-events-none rounded-full z-[110]';
+                const size = Math.random() * 10 + 5;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.background = '#ffcc00';
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * 60 + 30;
+                const translateX = Math.cos(angle) * distance;
+                const translateY = Math.sin(angle) * distance;
+                particle.style.transition = 'all 0.6s ease-out';
+                document.body.appendChild(particle);
+                requestAnimationFrame(() => {
+                    particle.style.transform = `translate(${translateX}px, ${translateY}px)`;
+                    particle.style.opacity = '0';
+                    particle.style.scale = '0';
+                });
+                setTimeout(() => particle.remove(), 600);
+            }
+        };
+
+        uploadInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    villainImage.src = e.target.result;
+                    villainImage.classList.add('rounded-full');
+                    hasUploaded = true;
+                    uploadLabel.classList.remove('hint-pulse');
+                    uploadLabel.classList.remove('bg-[#d9a000]');
+                    uploadLabel.classList.remove('shadow-[0_4px_0_#8b6100]');
+                    uploadLabel.classList.add('bg-green-700');
+                    uploadLabel.classList.add('shadow-[0_4px_0_#14532d]');
+                    uploadLabel.innerText = "重新上傳";
+                    imageOverlayHint.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        const resetGame = () => {
+            hitCount = 0;
+            comboCount = 0;
+            counter.innerText = '0';
+            comboCounterDisplay.innerText = '';
+            villainImage.src = defaultVillainSrc;
+            villainImage.classList.remove('rounded-full');
+            uploadInput.value = '';
+            villainContainer.classList.remove('villain-flattened');
+            villainContainer.classList.add('villain-idle');
+            isFlattened = false;
+            
+            hasUploaded = false;
+            uploadLabel.classList.add('hint-pulse');
+            uploadLabel.classList.add('bg-[#d9a000]');
+            uploadLabel.classList.add('shadow-[0_4px_0_#8b6100]');
+            uploadLabel.classList.remove('bg-green-700');
+            uploadLabel.classList.remove('shadow-[0_4px_0_#14532d]');
+            uploadLabel.innerText = "上傳小人照片";
+            imageOverlayHint.classList.remove('hidden');
+        };
+
+        gameContainer.addEventListener('mousedown', handleHit);
+        gameContainer.addEventListener('touchstart', handleHit, { passive: false });
+
+        resetButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetGame();
+        });
+
+        villainContainer.addEventListener('animationend', (e) => {
+            if (e.animationName === 'shake') {
+                villainContainer.classList.remove('villain-shake');
+            }
+        });
+
+    </script>
+</body>
+</html>
